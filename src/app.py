@@ -11,7 +11,7 @@ app.secret_key = os.urandom(24)
 DB_SERVER = 'manub.database.windows.net'
 DB_NAME = 'quiz5'
 DB_USER = 'manub'
-DB_PASSWORD = 'your_password'
+DB_PASSWORD = 'Arjunsuha1*'
 DB_DRIVER = 'ODBC Driver 17 for SQL Server'
 DATABASE_URI = f'mssql+pymssql://{DB_USER}:{DB_PASSWORD}@{DB_SERVER}/{DB_NAME}'
 
