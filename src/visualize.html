@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <h1 class="text-center my-4">Visualize Food Data</h1>
+    <form id="visualize-form">
+        <div class="form-group">
+            <label for="N">Number of Top Items to Display:</label>
+            <input type="number" id="N" name="N" class="form-control" value="5">
+        </div>
+        <button type="button" id="pie-chart-btn" class="btn btn-primary">Pie Chart</button>
+        <button type="button" id="bar-chart-btn" class="btn btn-primary">Bar Chart</button>
+        <button type="button" id="scatter-plot-btn" class="btn btn-primary">Scatter Plot</button>
+    </form>
+    <div id="chart-container"></div>
+</div>
+{% endblock %}
