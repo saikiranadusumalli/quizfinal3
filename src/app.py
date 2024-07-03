@@ -32,6 +32,10 @@ metadata.create_all(engine)
 def index():
     return render_template('index.html')
 
+@app.route('/query')
+def query():
+    return render_template('query.html')
+
 @app.route('/food', methods=['GET', 'POST'])
 def food():
     if request.method == 'POST':
@@ -59,7 +63,7 @@ def food():
         select = food_table.select()
         result = engine.execute(select)
         foods = [dict(row) for row in result]
-        return jsonify(foods)
+        return render_template('results.html', foods=foods)
 
 @app.route('/visualize', methods=['GET', 'POST'])
 def visualize():
