@@ -1,24 +1,16 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Food Data Visualization</title>
-    <link rel="stylesheet" href="styles.css">
-    <script src="https://d3js.org/d3.v6.min.js"></script>
-    <script src="scripts.js"></script>
-</head>
-<body>
-    <header>
-        <h1>Food Data Visualization</h1>
-    </header>
-    <div class="container">
-        <button id="add-food" class="btn btn-primary">Add Food</button>
-        <button id="modify-food" class="btn btn-primary">Modify Food</button>
-        <button id="delete-food" class="btn btn-primary">Delete Food</button>
-        <button id="pie-chart-btn" class="btn btn-primary">Pie Chart</button>
-        <button id="bar-chart-btn" class="btn btn-primary">Bar Chart</button>
-        <button id="scatter-plot-btn" class="btn btn-primary">Scatter Plot</button>
-        <div id="chart-container"></div>
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <h1 class="text-center my-4">Food Data Visualization</h1>
+    <div class="text-center mb-4">
+        <button id="add-food" class="btn btn-primary mx-2">Add Food</button>
+        <button id="modify-food" class="btn btn-primary mx-2">Modify Food</button>
+        <button id="delete-food" class="btn btn-primary mx-2">Delete Food</button>
+        <button id="pie-chart-btn" class="btn btn-primary mx-2">Pie Chart</button>
+        <button id="bar-chart-btn" class="btn btn-primary mx-2">Bar Chart</button>
+        <button id="scatter-plot-btn" class="btn btn-primary mx-2">Scatter Plot</button>
     </div>
-</body>
-</html>
+    <div id="chart-container" class="text-center"></div>
+</div>
+{% endblock %}
