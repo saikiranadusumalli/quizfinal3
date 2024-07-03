@@ -13,12 +13,13 @@
             </select>
         </div>
         <div class="form-group">
-            <label for="N">Top N Entries:</label>
-            <input type="number" id="N" name="N" class="form-control">
+            <label for="N">Top N Items:</label>
+            <input type="number" id="N" name="N" class="form-control" min="1">
         </div>
-        <button type="submit" class="btn btn-primary">Visualize</button>
+        <div class="form-group text-center">
+            <button type="submit" class="btn btn-primary">Visualize</button>
+        </div>
     </form>
-    <div id="chart" style="width: 75%; height: 85%; margin: auto;"></div>
+    <div id="chart" class="mt-4"></div>
 </div>
-<script src="https://d3js.org/d3.v6.min.js"></script>
 {% endblock %}
