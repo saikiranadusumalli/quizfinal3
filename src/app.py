@@ -1,196 +1,104 @@
 import os
 from flask import Flask, request, render_template, jsonify
-from sqlalchemy import create_engine, MetaData, Table, Column, Integer, String, DateTime, Float, text
-from geopy.distance import geodesic
-from datetime import datetime, timedelta
-from statistics import mean
-import pymssql
-import random
-import string
-
-# Set up Matplotlib
-import matplotlib
-matplotlib.use('Agg')
+from sqlalchemy import create_engine, MetaData, Table, Column, Integer, String, Float
+import pandas as pd
+import matplotlib.pyplot as plt
 
 app = Flask(__name__)
 app.secret_key = os.urandom(24)
 
-# SQLAlchemy connection string
-connection_string = (
-    "mssql+pymssql://manub:your_password@manub.database.windows.net:1433/quiz5"
-)
+# Database configuration
+DB_SERVER = 'manub.database.windows.net'
+DB_NAME = 'quiz5'
+DB_USER = 'manub'
+DB_PASSWORD = 'your_password'
+DB_DRIVER = 'ODBC Driver 17 for SQL Server'
+DATABASE_URI = f'mssql+pymssql://{DB_USER}:{DB_PASSWORD}@{DB_SERVER}/{DB_NAME}'
 
-# Create SQLAlchemy engine
-engine = create_engine(connection_string)
+engine = create_engine(DATABASE_URI)
 
-def setup_matplotlib():
-    import matplotlib.pyplot as plt
-    plt.switch_backend('Agg')
-    import cartopy.crs as ccrs
-    import cartopy.feature as cfeature
+metadata = MetaData()
 
-setup_matplotlib()
+# Define the food table
+food_table = Table('food', metadata,
+                   Column('id', Integer, primary_key=True, autoincrement=True),
+                   Column('name', String, nullable=False),
+                   Column('price', Float, nullable=False),
+                   Column('quantity', Integer, nullable=False))
 
-def execute_query(query, params=None):
-    connection = pymssql.connect(
-        server='manub.database.windows.net',
-        user='manub',
-        password='your_password',
-        database='quiz5'
-    )
-    cursor = connection.cursor(as_dict=True)
-    if params:
-        cursor.execute(query, params)
-    else:
-        cursor.execute(query)
-    rows = cursor.fetchall()
-    cursor.close()
-    connection.close()
-    return rows
+metadata.create_all(engine)
 
 @app.route('/')
 def index():
     return render_template('index.html')
 
-@app.route('/query', methods=['GET', 'POST'])
-def query_data():
+@app.route('/food', methods=['GET', 'POST'])
+def food():
     if request.method == 'POST':
-        try:
-            start_time = datetime.now()
-            
-            min_mag = request.form.get('min_mag')
-            max_mag = request.form.get('max_mag')
-            start_date = request.form.get('start_date')
-            end_date = request.form.get('end_date')
-            lat = request.form.get('latitude')
-            lon = request.form.get('longitude')
-            place = request.form.get('place')
-            distance = request.form.get('distance')
-            night_time = request.form.get('night_time')
-
-            query = '''
-                SELECT [time] AS Datetime, [latitude] AS Latitude, [longitude] AS Longitude, [mag] AS Magnitude, [place] AS Place, [distance] AS Distance, [place_name] AS Place_Name
-                FROM [dbo].[earthquakes]
-                WHERE 1=1
-            '''
-            params = []
-
-            if min_mag and max_mag:
-                query += ' AND [mag] BETWEEN %s AND %s'
-                params.extend([float(min_mag), float(max_mag)])
-
-            if start_date and end_date:
-                if start_date <= end_date:
-                    query += ' AND [time] BETWEEN %s AND %s'
-                    params.extend([start_date, end_date])
-                else:
-                    return 'Error: Start date must be before end date.', 400
-
-            if lat and lon and distance:
-                try:
-                    distance = float(distance)
-                except ValueError:
-                    return 'Error: Distance must be a number.', 400
-
-                earthquakes = execute_query(query, params)
-                nearby_earthquakes = [
-                    {
-                        'Datetime': quake['Datetime'],
-                        'Latitude': float(quake['Latitude']),
-                        'Longitude': float(quake['Longitude']),
-                        'Magnitude': float(quake['Magnitude']),
-                        'Place': quake['Place'],
-                        'Distance': float(quake['Distance']),
-                        'Place_Name': quake['Place_Name']
-                    }
-                    for quake in earthquakes
-                    if geodesic((float(lat), float(lon)), (float(quake['Latitude']), float(quake['Longitude']))).km <= distance
-                ]
-                end_time = datetime.now()
-                elapsed_time = (end_time - start_time).total_seconds()
-                return render_template('results.html', earthquakes=nearby_earthquakes, map_path=None, query_time=elapsed_time)
-
-            if place:
-                query += ' AND [place_name] LIKE %s'
-                params.append(f'%{place}%')
-
-            if distance:
-                query += ' AND [distance] <= %s'
-                params.append(float(distance))
-
-            if night_time:
-                query += " AND [mag] > 4.0 AND (DATEPART(HOUR, [time]) >= 18 OR DATEPART(HOUR, [time]) <= 6)"
-
-            query_key = f"{min_mag}_{max_mag}_{start_date}_{end_date}_{lat}_{lon}_{place}_{distance}_{night_time}"
-            try:
-                earthquakes = execute_query(query, params)
-                end_time = datetime.now()
-                elapsed_time = (end_time - start_time).total_seconds()
-                return render_template('results.html', earthquakes=earthquakes, map_path=None, cached=False, query_time=elapsed_time)
-            except Exception as e:
-                return str(e), 400
-
-        except Exception as e:
-            return str(e), 400
-
-    return render_template('query.html')
+        data = request.get_json()
+        command = data.get('command')
+        if command == 'add':
+            name = data.get('name')
+            price = data.get('price')
+            quantity = data.get('quantity')
+            ins = food_table.insert().values(name=name, price=price, quantity=quantity)
+            engine.execute(ins)
+        elif command == 'delete':
+            id = data.get('id')
+            delete = food_table.delete().where(food_table.c.id == id)
+            engine.execute(delete)
+        elif command == 'modify':
+            id = data.get('id')
+            name = data.get('name')
+            price = data.get('price')
+            quantity = data.get('quantity')
+            update = food_table.update().where(food_table.c.id == id).values(name=name, price=price, quantity=quantity)
+            engine.execute(update)
+        return jsonify(success=True)
+    else:
+        select = food_table.select()
+        result = engine.execute(select)
+        foods = [dict(row) for row in result]
+        return jsonify(foods)
 
 @app.route('/visualize', methods=['GET', 'POST'])
-def visualize_data():
+def visualize():
     if request.method == 'POST':
-        data = request.json
-        chart_type = data.get('type')
-        N = int(data.get('N', 10))
-
-        # Query to get top N food items
-        query = f"SELECT TOP {N} * FROM food ORDER BY price DESC"
-        food_items = execute_query(query)
-
-        if chart_type == 'pie':
-            create_pie_chart(food_items)
-        elif chart_type == 'bar':
-            create_bar_chart(food_items)
-        elif chart_type == 'scatter':
-            create_scatter_plot(food_items)
-        
-        return jsonify({"status": "success"})
-    
+        data = request.get_json()
+        viz_type = data.get('type')
+        N = data.get('N')
+        if viz_type == 'pie':
+            query = f'SELECT name, quantity FROM food ORDER BY quantity DESC LIMIT {N}'
+            result = engine.execute(query)
+            df = pd.DataFrame(result.fetchall(), columns=['name', 'quantity'])
+            plt.figure(figsize=(10, 6))
+            plt.pie(df['quantity'], labels=df['name'], autopct='%1.1f%%', startangle=140)
+            plt.axis('equal')
+            plt.savefig('static/pie_chart.png')
+            plt.close()
+        elif viz_type == 'bar':
+            query = f'SELECT name, price FROM food ORDER BY price DESC LIMIT {N}'
+            result = engine.execute(query)
+            df = pd.DataFrame(result.fetchall(), columns=['name', 'price'])
+            plt.figure(figsize=(10, 6))
+            plt.barh(df['name'], df['price'], color='blue')
+            plt.xlabel('Price')
+            plt.ylabel('Food')
+            plt.savefig('static/bar_chart.png')
+            plt.close()
+        elif viz_type == 'scatter':
+            query = 'SELECT * FROM food'
+            result = engine.execute(query)
+            df = pd.DataFrame(result.fetchall(), columns=['id', 'name', 'price', 'quantity'])
+            plt.figure(figsize=(10, 6))
+            colors = df['quantity'].apply(lambda x: 'red' if x < 100 else 'blue' if x <= 1000 else 'green')
+            plt.scatter(df.index, df['price'], c=colors)
+            plt.xlabel('Index')
+            plt.ylabel('Price')
+            plt.savefig('static/scatter_plot.png')
+            plt.close()
+        return jsonify(success=True)
     return render_template('visualize.html')
-
-def create_pie_chart(data):
-    import matplotlib.pyplot as plt
-    labels = [item['name'] for item in data]
-    sizes = [item['price'] for item in data]
-    
-    fig1, ax1 = plt.subplots()
-    ax1.pie(sizes, labels=labels, autopct='%1.1f%%', startangle=90)
-    ax1.axis('equal')
-    plt.savefig('static/pie_chart.png')
-
-def create_bar_chart(data):
-    import matplotlib.pyplot as plt
-    labels = [item['name'] for item in data]
-    sizes = [item['price'] for item in data]
-    
-    plt.figure(figsize=(10, 5))
-    plt.bar(labels, sizes)
-    plt.xlabel('Food Items')
-    plt.ylabel('Price')
-    plt.title('Top Food Items by Price')
-    plt.xticks(rotation=45)
-    plt.savefig('static/bar_chart.png')
-
-def create_scatter_plot(data):
-    import matplotlib.pyplot as plt
-    prices = [item['price'] for item in data]
-    quantities = [item['quantity'] for item in data]
-    
-    plt.figure(figsize=(10, 5))
-    plt.scatter(prices, quantities)
-    plt.xlabel('Price')
-    plt.ylabel('Quantity')
-    plt.title('Price vs Quantity of Food Items')
-    plt.savefig('static/scatter_plot.png')
 
 if __name__ == '__main__':
     app.run(debug=True)
